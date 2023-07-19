@@ -1,0 +1,224 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+const int MAX_PLAYERS = 11;
+
+struct Player {
+    string name;
+    int runs;
+    int balls;
+    bool out;
+};
+
+struct Team {
+    string name;
+    Player players[MAX_PLAYERS];
+    int currentBatsmanOnStrikeIndex;
+    int currentNonStrikerIndex;
+    int runs;
+    int wickets;
+    float overs;
+};
+
+struct Extras {
+    int wides;
+    int noBalls;
+    int byes;
+    int legByes;
+};
+
+void displayScore(const Team& battingTeam, const Team& bowlingTeam, const Extras& extras) {
+    cout << "--------------------------------------------------" << endl;
+    cout << "       " << battingTeam.name << " - " << battingTeam.runs << "/" << battingTeam.wickets << " (" << battingTeam.overs << " overs)" << endl;
+    cout << "--------------------------------------------------" << endl;
+    cout << "Batsmen:\n";
+    for (int i = 0; i < MAX_PLAYERS; ++i) {
+        const Player& player = battingTeam.players[i];
+        cout << player.name << "\t\t\t\t" << player.runs << " (" << player.balls << ")";
+
+        if (player.out) {
+            cout << " \t\t\tOUT";
+        }
+        cout << endl;
+    }
+
+    cout << "\nExtras: ";
+    cout << "Wides - " << extras.wides << ", ";
+    cout << "No Balls - " << extras.noBalls << ", ";
+    cout << "Byes - " << extras.byes << ", ";
+    cout << "Leg Byes - " << extras.legByes << endl;
+
+    cout << "\n--------------------------------------------------" << endl;
+    cout << "       " << bowlingTeam.name << " - " << bowlingTeam.runs << "/" << bowlingTeam.wickets << " (" << battingTeam.overs << " overs)" << endl;
+    cout << "--------------------------------------------------" << endl;
+}
+
+void updateScore(Team& team, int runs, int wickets, float overs) {
+    team.runs += runs;
+    team.wickets += wickets;
+    team.overs += overs;
+}
+
+void updateExtras(Extras& extras, int wides, int noBalls, int byes, int legByes) {
+    extras.wides += wides;
+    extras.noBalls += noBalls;
+    extras.byes += byes;
+    extras.legByes += legByes;
+}
+
+void playerOut(Team& team) {
+    team.players[team.currentBatsmanOnStrikeIndex].out = true;
+    team.currentBatsmanOnStrikeIndex++;
+}
+
+void takeInput(Team& battingTeam, Extras& extras) {
+    Player& batsmanOnStrike = battingTeam.players[battingTeam.currentBatsmanOnStrikeIndex];
+
+    // User input for runs scored or if player is out, wide ball, no ball, byes, or leg byes
+    int ballOutcome;
+    cout << "Enter runs scored (0-6), -1 for out, -2 for wide ball, -3 for no ball, -4 for byes, -5 for leg byes: ";
+    cin >> ballOutcome;
+
+    if (ballOutcome >= 0 && ballOutcome <= 6) {
+        // Runs scored
+        int runs = ballOutcome;
+        batsmanOnStrike.runs += runs;
+        batsmanOnStrike.balls++;
+        updateScore(battingTeam, runs, 0, 0);
+        cout << "Ball outcome: " << runs << " runs" << endl;
+
+        // Rotate the strike if 1 or 3 runs are scored (except for wide balls, no balls, byes, and leg byes)
+        if ((runs == 1 || runs == 3) && extras.wides == 0 && extras.noBalls == 0 && extras.byes == 0 && extras.legByes == 0) {
+            // Swap the current batsman on strike and the non-striker
+            swap(battingTeam.currentBatsmanOnStrikeIndex, battingTeam.currentNonStrikerIndex);
+        }
+    } else if (ballOutcome == -1) {
+        // Player is out
+        playerOut(battingTeam);
+        cout << "Ball outcome: Out!" << endl;
+    } else if (ballOutcome == -2) {
+        // Wide ball
+        extras.wides++;
+        cout << "Ball outcome: Wide ball!" << endl;
+        // Rotate the strike on wide balls as well
+        swap(battingTeam.currentBatsmanOnStrikeIndex, battingTeam.currentNonStrikerIndex);
+    } else if (ballOutcome == -3) {
+        // No ball
+        extras.noBalls++;
+        cout << "Ball outcome: No ball!" << endl;
+    } else if (ballOutcome == -4) {
+        // Byes
+        extras.byes++;
+        cout << "Ball outcome: Byes!" << endl;
+    } else if (ballOutcome == -5) {
+        // Leg byes
+        extras.legByes++;
+        cout << "Ball outcome: Leg byes!" << endl;
+    }
+}
+
+void simulateMatch(Team& battingTeam, Team& bowlingTeam, int numOvers) {
+    int validBalls = 0;  // Number of valid balls bowled (excluding wides and no balls)
+    Extras extras = {0, 0, 0, 0};
+
+    while (battingTeam.overs < numOvers && (battingTeam.wickets < MAX_PLAYERS || validBalls < numOvers * 6)) {
+        cout << "\nBall " << validBalls + 1 << ":" << endl;
+        takeInput(battingTeam, extras);
+
+        // Increment valid balls only if it's not a wide or no ball
+        if (extras.wides == 0 && extras.noBalls == 0) {
+            validBalls++;
+        }
+
+        displayScore(battingTeam, bowlingTeam, extras);
+
+        // Reset extras
+        extras = {0, 0, 0, 0};
+    }
+}
+
+int main() {
+    srand(time(0)); // Initialize random seed
+
+    Team team1;
+    Team team2;
+
+    // Initialize team names
+    team1.name = "Team 1";
+    team2.name = "Team 2";
+
+    // Initialize player names
+    for (int i = 0; i < MAX_PLAYERS; ++i) {
+        team1.players[i].name = "Player " + to_string(i + 1);
+        team2.players[i].name = "Player " + to_string(i + 12);
+    }
+
+    // Initialize scores
+    for (int i = 0; i < MAX_PLAYERS; ++i) {
+        team1.players[i].runs = 0;
+        team1.players[i].balls = 0;
+        team1.players[i].out = false;
+
+        team2.players[i].runs = 0;
+        team2.players[i].balls = 0;
+        team2.players[i].out = false;
+    }
+
+    team1.currentBatsmanOnStrikeIndex = 0;
+    team1.currentNonStrikerIndex = 1;
+    team1.runs = 0;
+    team1.wickets = 0;
+    team1.overs = 0.0;
+
+    team2.currentBatsmanOnStrikeIndex = 0;
+    team2.currentNonStrikerIndex = 1;
+    team2.runs = 0;
+    team2.wickets = 0;
+    team2.overs = 0.0;
+
+    // Display scores
+    displayScore(team1, team2, {0, 0, 0, 0});
+    cout << endl;
+    displayScore(team2, team1, {0, 0, 0, 0});
+
+    cout << "\n=== Match Started ===" << endl;
+
+    // Ask for the number of overs in the first innings
+    int numOvers;
+    cout << "Enter the number of overs for the first innings: ";
+    cin >> numOvers;
+
+    // Simulate the match for Team 1 batting
+    cout << "\n=== Innings: " << team1.name << " ===" << endl;
+    simulateMatch(team1, team2, numOvers);
+
+    // Display scores after Team 1's innings
+    cout << "\n=== " << team1.name << " Innings Finished ===" << endl;
+    displayScore(team1, team2, {0, 0, 0, 0});
+    cout << endl;
+    displayScore(team2, team1, {0, 0, 0, 0});
+
+    // Simulate the match for Team 2 batting
+    cout << "\n=== Innings: " << team2.name << " ===" << endl;
+    simulateMatch(team2, team1, numOvers);
+
+    // Determine the result of the match
+    string result;
+    if (team1.runs > team2.runs) {
+        result = team1.name + " wins!";
+    } else if (team2.runs > team1.runs) {
+        result = team2.name + " wins!";
+    } else {
+        result = "Match tied!";
+    }
+
+    // Display the result
+    cout << "\n=== Match Finished ===" << endl;
+    cout << "\nFinal Scores:\n";
+    displayScore(team1, team2, {0, 0, 0, 0});
+    cout << endl;
+    displayScore(team2, team1, {0, 0, 0, 0});
+    cout << "\nResult: " << result << endl;
+
+    return 0;
+}
